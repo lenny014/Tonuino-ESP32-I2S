@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
-    <title>ESPuino-Konfiguration</title>
+    <title data-i18n="app-title">ESPuino-Konfiguration</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://ts-cs.de/tonuino/css/bootstrap.min.css">
@@ -14,6 +14,33 @@
     <script src="https://ts-cs.de/tonuino/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/jstree.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.i18n/1.0.7/jquery.i18n.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.i18n/1.0.7/jquery.i18n.messagestore.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.i18n/1.0.7/jquery.i18n.fallbacks.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.i18n/1.0.7/jquery.i18n.parser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.i18n/1.0.7/jquery.i18n.emitter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.i18n/1.0.7/jquery.i18n.language.min.js" ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.i18n/1.0.7/jquery.i18n.emitter.bidi.min.js"></script>
+    <script type="text/javascript">
+
+        var DEBUG = false;
+
+        $.i18n.debug = DEBUG;
+        var userLang = navigator.language || navigator.userLanguage;
+
+        $.i18n().load({
+            en: 'i18n/'+ userLang.split('-')[0] +'.json'
+        }).done( function() {
+            console.log('Language Files loaded...');
+            $.i18n().locale = 'en';
+        });
+
+        var host = $(location).attr('hostname');
+
+        if (DEBUG) {
+            host = "192.168.178.114";
+        }
+    </script>
     <style type="text/css">
         .filetree {
             border: 1px solid black;
@@ -113,17 +140,17 @@
 </nav>
 <br/>
 <div class="container" id="wifiConfig">
-    <h2>WLAN-Konfiguration</h2>
+    <h2 data-i18n="message-wifi-title">WLAN-Konfiguration</h2>
     <form action="#wifiConfig" method="POST" onsubmit="wifiConfig('wifiConfig'); return false">
         <div class="form-group col-md-6">
-            <label for="ssid">WLAN-Name (SSID):</label>
+            <label data-i18n="message-wifi-ssid" for="ssid">WLAN-Name (SSID):</label>
             <input type="text" class="form-control" id="ssid" placeholder="SSID" name="ssid" required>
-            <div class="invalid-feedback">
+            <div class="invalid-feedback" data-i18n="enter-ssid-name">
                 Bitte SSID des WLANs eintragen.
             </div>
-            <label for="pwd">Passwort:</label>
+            <label data-i18n="message-wifi-password" for="pwd">Passwort:</label>
             <input type="password" class="form-control" id="pwd" placeholder="Passwort" name="pwd" required>
-            <label for="hostname">Tonuino-Name (Hostname):</label>
+            <label data-i18n="tonuino-hostname" for="hostname">Tonuino-Name (Hostname):</label>
             <input type="text" class="form-control" id="hostname" placeholder="tonuino" name="hostname"
                    value="%HOSTNAME%" pattern="^[^-\.]{2,32}" required>
         </div>
@@ -313,31 +340,9 @@
     <div class="messages col-md-6 my-2"></div>
 </div>
 <script type="text/javascript">
-    var DEBUG = false;
+
+
     var lastIdclicked = '';
-    var host = $(location).attr('hostname');
-
-    if (DEBUG) {
-        host = "192.168.178.112";
-    }
-
-    toastr.options = {
-        "closeButton": false,
-        "debug": false,
-        "newestOnTop": false,
-        "progressBar": false,
-        "positionClass": "toast-top-right",
-        "preventDuplicates": false,
-        "onclick": null,
-        "showDuration": "300",
-        "hideDuration": "1000",
-        "timeOut": "5000",
-        "extendedTimeOut": "1000",
-        "showEasing": "swing",
-        "hideEasing": "linear",
-        "showMethod": "fadeIn",
-        "hideMethod": "fadeOut"
-    };
 
     function postRendering(event, data) {
         Object.keys(data.instance._model.data).forEach(function (key, index) {
@@ -375,7 +380,7 @@
                         $('#filetree').on("click", function () {
                             refreshFileList();
                         });
-                        toastr.error("Die Verzeichnis-Liste konnte nicht geladen werden.");
+                        toastr.error($.i18n('message-notify-file-browser-error'));
                     }
                 },
 
@@ -405,35 +410,6 @@
         });
     }
 
-    $('#filetree').on('select_node.jstree', function (e, data) {
-        $('input[name=fileOrUrl]').val(data.node.id);
-
-        if (data.node.type == "folder") {
-            $('.option-folder').show();
-            $('.option-file').hide();
-            $('#playMode option').removeAttr('selected').filter('[value=3]').attr('selected', true);
-        }
-
-        if (data.node.type == "audio") {
-            $('.option-file').show();
-            $('.option-folder').hide();
-            $('#playMode option').removeAttr('selected').filter('[value=1]').attr('selected', true);
-        }
-    });
-
-    $('#refreshAction').on("click", function () {
-        refreshFileList();
-        $("#indexing-progress").show();
-        $("#refreshAction").hide();
-    });
-
-    $('#playMode').on("change", function () {
-        if (this.value == 8) {
-            $('#filebrowser').slideUp();
-        } else {
-            $('#filebrowser').slideDown();
-        }
-    });
 
     function showFileIndexingState() {
         $("#indexing-progress").show();
@@ -629,11 +605,8 @@
     $(document).ready(function () {
         connect();
         renderFileTree();
-
-        $(function () {
-            $('[data-toggle="tooltip"]').tooltip();
-        });
-    });
+       $('[data-toggle="tooltip"]').tooltip();
+    })
 </script>
 </body>
 </html>

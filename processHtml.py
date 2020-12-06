@@ -1,61 +1,35 @@
 #!/usr/bin/python
-import re
+###
+# Use this script for creating PROGMEM header files from html files.
+##
+# html file base names
+HTML_FILES = ["management", "accesspoint"]
 
-content = ''
-content2 = ''
-contentEN = ''
-content2EN = ''
+class htmlHeaderProcessor(object):
 
-# TODO: Add a JS Minifier python lib
-with open('html/website.html', 'r') as r:
-    data = r.read()
-    data = data.replace('\n', '\\\n')
-    data = data.replace('\"', '\\"')
-    data = data.replace('\\d', '\\\d')
-    data = data.replace('\\.', '\\\.')
-    data = data.replace('\\^', '\\\\^')
-    data = data.replace('%;', '%%;')
-    content += data
+    def html_to_c_header(self, filename):
+        content = ""
+        with open('html/' + filename + '.html', 'r') as r:
+            data = r.read()
+            data = data.replace('\n', '\\\n')
+            data = data.replace('\"', '\\"')
+            data = data.replace('\\d', '\\\d')
+            data = data.replace('\\.', '\\\.')
+            data = data.replace('\\^', '\\\\^')
+            data = data.replace('%;', '%%;')
+            content += data
+        return content
 
-with open('src/websiteMgmt.h', 'w') as w:
-    w.write("static const char mgtWebsite[] PROGMEM = \"")
-    w.write(content)
-    w.write("\";")
+    def write_header_file(self, filename, content):
+        with open('src/HTML' + filename + '.h', 'w') as w:
+            w.write("static const char " + filename + "_HTML[] PROGMEM = \"")
+            w.write(content)
+            w.write("\";")
 
-with open('html/website_EN.html', 'r') as ren:
-    data = ren.read().replace('\n', '\\\n')
-    data = data.replace('\"', '\\"')
-    data = data.replace('\\d', '\\\d')
-    data = data.replace('\\.', '\\\.')
-    data = data.replace('\\^', '\\\\^')
-    contentEN += data
+    def main(self):
+        for file in HTML_FILES:
+           self.header_file_content = self.html_to_c_header(file)
+           self.write_header_file(file, self.header_file_content)
 
-with open('src/websiteMgmt_EN.h', 'w') as wen:
-    wen.write("static const char mgtWebsite[] PROGMEM = \"")
-    wen.write(contentEN)
-    wen.write("\";")
-
-with open('html/websiteBasic.html', 'r') as r2:
-    data = r2.read().replace('\n', '\\\n')
-    data = data.replace('\"', '\\"')
-    content2 += data
-
-with open('src/websiteBasic.h', 'w') as w2:
-    w2.write("static const char basicWebsite[] PROGMEM = \"")
-    w2.write(content2)
-    w2.write("\";")
-
-with open('html/websiteBasic_EN.html', 'r') as r2en:
-    data = r2en.read().replace('\n', '\\\n')
-    data = data.replace('\"', '\\"')
-    content2EN += data
-
-with open('src/websiteBasic_EN.h', 'w') as w2en:
-    w2en.write("static const char basicWebsite[] PROGMEM = \"")
-    w2en.write(content2EN)
-    w2en.write("\";")
-
-r.close()
-w.close()
-r2.close()
-w2.close()
+if __name__ == '__main__':
+    htmlHeaderProcessor().main()

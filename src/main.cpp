@@ -25,16 +25,10 @@
     #include <FastLED.h>
 #endif
 
-#if (LANGUAGE == 1)
-    #include "logmessages.h"
-    #include "websiteMgmt.h"
-    #include "websiteBasic.h"
-#endif
-#if (LANGUAGE == 2)
-    #include "logmessages_EN.h"
-    #include "websiteMgmt_EN.h"
-    #include "websiteBasic_EN.h"
-#endif
+#include "logmessages.h"
+#include "HTMLmanagement.h"
+#include "HTMLaccesspoint.h"
+
 
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -2857,7 +2851,7 @@ void accessPointStart(const char *SSID, IPAddress ip, IPAddress netmask) {
     loggerNl(logBuf, LOGLEVEL_NOTICE);
 
     wServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-            request->send_P(200, "text/html", basicWebsite);
+            request->send_P(200, "text/html", accesspoint_HTML);
         });
 
     wServer.on("/init", HTTP_POST, [] (AsyncWebServerRequest *request) {
@@ -2869,11 +2863,12 @@ void accessPointStart(const char *SSID, IPAddress ip, IPAddress netmask) {
             prefsSettings.putString("Password", request->getParam("pwd", true)->value());
             prefsSettings.putString("Hostname", request->getParam("hostname", true)->value());
         }
-        request->send_P(200, "text/html", basicWebsite);
+        request->send_P(200, "text/html", accesspoint_HTML);
     });
 
     wServer.on("/restart", HTTP_GET, [] (AsyncWebServerRequest *request) {
-        request->send(200, "text/html", "ESP wird neu gestartet...");
+        request->send(200, "text/html", "Tonuino reboots...");
+        request->send_P(200, "text/html", accesspoint_HTML);
         Serial.flush();
         ESP.restart();
     });
@@ -3340,7 +3335,7 @@ void webserverStart(void) {
     wServer.addHandler(&events);
 
     wServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send_P(200, "text/html", mgtWebsite, templateProcessor);
+        request->send_P(200, "text/html", management_HTML, templateProcessor);
     });
 
     wServer.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request){
@@ -3356,6 +3351,8 @@ void webserverStart(void) {
     wServer.on("/files", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(SD, "/files.json", "application/json");
     });
+
+    wServer.serveStatic("/i18n", SD, "/i18n/");
 
     wServer.onNotFound(notFound);
 

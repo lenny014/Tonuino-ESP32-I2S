@@ -1,0 +1,7 @@
+{
+  "message-wifi-title": "WLAN Konfiguration",
+  "message-wifi-ssid": "SSID Name",
+  "message-wifi-password": "Please enter your WiFi SSID",
+  "message-tonuino-hostname": "Tonuino Hostname",
+  "message-notify-file-browser-error" : "Fehler beim Laden der Datei und Verzeichnis Liste."
+}
