@@ -465,14 +465,14 @@ bool isFirstJSONtNode = true;
  */
 void appendNodeToJSONFile(fs::FS &fs, const char * path, const char *filename, const char *parent, const char *type ) {
     // Serial.printf("Appending to file: %s\n", path);
-    snprintf(logBuf, serialLoglength, "Listing directory: %s\n", filename);
-    loggerNl(logBuf, LOGLEVEL_DEBUG);
+    //snprintf(logBuf, serialLoglength, "Listing directory: %s\n", filename);
+    //loggerNl(logBuf, LOGLEVEL_DEBUG);
     File file = fs.open(path, FILE_APPEND);
     // i/o is timing critical keep all stuff running
     esp_task_wdt_reset();
     if (!file) {
-        snprintf(logBuf, serialLoglength, "Failed to open file for appending");
-        loggerNl(logBuf, LOGLEVEL_DEBUG);
+        //snprintf(logBuf, serialLoglength, "Failed to open file for appending");
+        //loggerNl(logBuf, LOGLEVEL_DEBUG);
         return;
     }
 
@@ -483,15 +483,15 @@ void appendNodeToJSONFile(fs::FS &fs, const char * path, const char *filename, c
     //TODO: write a minified json, without all those whitespaces
     //      it is just easier to debug when json is in a nice format
     //      anyway ugly but works and is stable
-    file.print(F(( "  {\n     \"id\" : \"")));
+    file.print(F(( "{\"id\":\"")));
     file.print(filename);
-    file.print(F("\",\n     \"parent\" : \""));
+    file.print(F("\",\"parent\":\""));
     file.print(parent);
-    file.print(F("\",\n    \"type\": \""));
+    file.print(F("\",\"type\":\""));
     file.print(type);
-    file.print(F("\",\n   \"text\" : \""));
+    file.print(F("\",\"text\":\""));
     file.print(filename);
-    file.print(F("\"\n  }"));
+    file.print(F("\"}"));
     // i/o is timing critical keep all stuff running
     esp_task_wdt_reset();
     yield();
