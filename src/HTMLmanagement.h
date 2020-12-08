@@ -602,10 +602,34 @@ static const char management_HTML[] PROGMEM = "<!DOCTYPE html>\
         socket.send(myJSON);\
     }\
 \
+    $('#refreshAction').on(\"click\", function () {\
+        refreshFileList();\
+        $(\"#indexing-progress\").show();\
+        $(\"#refreshAction\").hide();\
+    });\
+\
+\
+\
     $(document).ready(function () {\
         connect();\
         renderFileTree();\
        $('[data-toggle=\"tooltip\"]').tooltip();\
+\
+       $('#filetree').on('select_node.jstree', function (e, data) {\
+            $('input[name=fileOrUrl]').val(data.node.id);\
+\
+            if (data.node.type == \"folder\") {\
+                $('.option-folder').show();\
+                $('.option-file').hide();\
+                $('#playMode option').removeAttr('selected').filter('[value=3]').attr('selected', true);\
+            }\
+\
+            if (data.node.type == \"audio\") {\
+                $('.option-file').show();\
+                $('.option-folder').hide();\
+                $('#playMode option').removeAttr('selected').filter('[value=1]').attr('selected', true);\
+            }\
+       });\
     })\
 </script>\
 </body>\
