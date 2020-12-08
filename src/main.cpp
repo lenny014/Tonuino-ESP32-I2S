@@ -2,6 +2,7 @@
 
 #include "settings.h"                       // Contains all user-relevant settings
 #include <ESP32Encoder.h>
+#include <ESPmDNS.h>
 #include "Arduino.h"
 #include <WiFi.h>
 #ifdef FTP_ENABLE
@@ -2953,6 +2954,7 @@ wl_status_t wifiManager(void) {
         // ...and create a connection with it. If not successful, an access-point is opened
         WiFi.begin(_ssid, _pwd);
 
+
         uint8_t tryCount=0;
         while (WiFi.status() != WL_CONNECTED && tryCount <= 4) {
             delay(500);
@@ -2974,6 +2976,12 @@ wl_status_t wifiManager(void) {
         } else { // Starts AP if WiFi-connect wasn't successful
             accessPointStart((char *) FPSTR(accessPointNetworkSSID), apIP, apNetmask);
         }
+
+        // zero conf, make device available as <hostname>.local
+        if (MDNS.begin(hostname.c_str())) {
+            MDNS.addService("http", "tcp", 80);
+        }
+
         wifiNeedsRestart = false;
     }
 
@@ -3036,7 +3044,7 @@ String templateProcessor(const String& templ) {
     } else if (templ == "RFID_TAG_ID") {
         return String(currentRfidTagId);
     } else if (templ == "HOSTNAME") {
-        return prefsSettings.getString("Hostname", "-1");
+        return prefsSettings.getString("Hostname", "tonuino");
     }
 
     return String();
@@ -3169,7 +3177,7 @@ bool processJsonRequest(char *_serialJson) {
 
         String sSsid = prefsSettings.getString("SSID", "-1");
         String sPwd = prefsSettings.getString("Password", "-1");
-        String sHostname = prefsSettings.getString("Hostname", "-1");
+        String sHostname = prefsSettings.getString("Hostname", "tonuino");
 
         if (sSsid.compareTo(_ssid) || sPwd.compareTo(_pwd)) {
             return false;
@@ -3834,6 +3842,8 @@ void setup() {
         createFile(SD,DIRECTORY_INDEX_FILE,"[]");
         ESP.restart();
     }
+
+
     bootComplete = true;
 
     Serial.print(F("Free heap: "));
