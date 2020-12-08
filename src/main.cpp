@@ -145,8 +145,8 @@ uint8_t nightLedBrightness = 2;                         // Brightness of Neopixe
 // MQTT
 bool enableMqtt = true;
 #ifdef MQTT_ENABLE
-    uint8_t mqttFailCount = 3;                          // Number of times mqtt-reconnect is allowed to fail. If >= mqttFailCount to further reconnects take place
     uint8_t const stillOnlineInterval = 60;             // Interval 'I'm still alive' is sent via MQTT (in seconds)
+    uint32_t mqttLastRetryTimestamp = 0;
 #endif
 
 uint8_t const cardIdSize = 4;                           // RFID
@@ -408,20 +408,23 @@ void IRAM_ATTR onTimer() {
  * @param message
  */
 void createFile(fs::FS &fs, const char * path, const char * message) {
-    snprintf(logBuf, serialLoglength, "Writing file: %s\n", path);
+    //snprintf(logBuf, serialLoglength, "Writing file: %s\n", path);
+    snprintf(logBuf, serialLoglength, "%s: %s", (char *) FPSTR(writingFile), path);
     loggerNl(logBuf, LOGLEVEL_DEBUG);
     File file = fs.open(path, FILE_WRITE);
-    if(!file){
-        snprintf(logBuf, serialLoglength, "Failed to open file for writing");
+    if (!file) {
+        snprintf(logBuf, serialLoglength, "%s", (char *) FPSTR(failedOpenFileForWrite));
+        //snprintf(logBuf, serialLoglength, "Failed to open file for writing");
         loggerNl(logBuf, LOGLEVEL_ERROR);
         return;
     }
-    if(file.print(message)){
-        snprintf(logBuf, serialLoglength, "File written");
+    if (file.print(message)) {
+        //snprintf(logBuf, serialLoglength, "File written");
+        snprintf(logBuf, serialLoglength, "%s", (char *) FPSTR(fileWritten));
         loggerNl(logBuf, LOGLEVEL_DEBUG);
     } else {
-        Serial.println("Write failed");
-        snprintf(logBuf, serialLoglength, "Write failed");
+        //snprintf(logBuf, serialLoglength, "Write failed");
+        snprintf(logBuf, serialLoglength, "%s", (char *) FPSTR(writeFailed));
         loggerNl(logBuf, LOGLEVEL_ERROR);
     }
     file.close();
@@ -528,39 +531,39 @@ void parseSDFileList(fs::FS &fs, const char * dirname, const char * parent, uint
     yield();
     File root = fs.open(dirname);
 
-    if(!root){
+    if (!root) {
         snprintf(logBuf, serialLoglength, "Failed to open directory");
         loggerNl(logBuf, LOGLEVEL_DEBUG);
         return;
     }
 
-    if(!root.isDirectory()){
+    if (!root.isDirectory()) {
         snprintf(logBuf, serialLoglength, "Not a directory");
         loggerNl(logBuf, LOGLEVEL_DEBUG);
         return;
     }
     File file = root.openNextFile();
 
-    while(file){
+    while(file) {
         esp_task_wdt_reset();
         const char *parent;
 
-        if (strcmp(root.name(), "/") == 0 || root.name() == 0){
+        if (strcmp(root.name(), "/") == 0 || root.name() == 0) {
             parent = "#\0";
         } else {
             parent = root.name();
         }
-        if (file.name() == 0 ){
+        if (file.name() == 0 ) {
             continue;
         }
 
         strncpy(fileNameBuf, (char *) file.name(), sizeof(fileNameBuf) / sizeof(fileNameBuf[0]));
 
         // we have a folder
-        if(file.isDirectory()){
+        if(file.isDirectory()) {
 
             esp_task_wdt_reset();
-            if (pathValid(fileNameBuf)){
+            if (pathValid(fileNameBuf)) {
                 sendWebsocketData(0, 31);
                 appendNodeToJSONFile(SD, DIRECTORY_INDEX_FILE, fileNameBuf, parent, "folder" );
 
@@ -572,7 +575,7 @@ void parseSDFileList(fs::FS &fs, const char * dirname, const char * parent, uint
         // we have a file
         } else {
 
-            if (fileValid(fileNameBuf)){
+            if (fileValid(fileNameBuf)) {
                 appendNodeToJSONFile(SD, DIRECTORY_INDEX_FILE, fileNameBuf, parent, "file" );
             }
         }
@@ -607,7 +610,7 @@ void fileHandlingTask(void *arguments) {
 // Measures voltage of a battery as per interval or after bootup (after allowing a few seconds to settle down)
 #ifdef MEASURE_BATTERY_VOLTAGE
     float measureBatteryVoltage(void) {
-        float factor = 1 / ((float) r1/(r1+r2));
+        float factor = 1 / ((float) rdiv2/(rdiv2+rdiv1));
         return ((float) analogRead(VOLTAGE_READ_PIN) / maxAnalogValue) * refVoltage * factor;
     }
 
@@ -801,10 +804,17 @@ void postHeartbeatViaMqtt(void) {
     Manages MQTT-subscriptions.
 */
 bool reconnect() {
-  uint8_t maxRetries = 10;
   uint8_t connect = false;
+  uint8_t i = 0;
 
-  while (!MQTTclient.connected() && mqttFailCount < maxRetries) {
+  if (!mqttLastRetryTimestamp || millis() - mqttLastRetryTimestamp >= mqttRetryInterval * 1000) {
+      mqttLastRetryTimestamp = millis();
+  } else {
+      return false;
+  }
+
+  while (!MQTTclient.connected() && i < mqttMaxRetriesPerInterval) {
+    i++;
     snprintf(logBuf, serialLoglength, "%s %s", (char *) FPSTR(tryConnectMqttS), mqtt_server);
     loggerNl(logBuf, LOGLEVEL_NOTICE);
 
@@ -863,10 +873,8 @@ bool reconnect() {
 
         return MQTTclient.connected();
     } else {
-        snprintf(logBuf, serialLoglength, "%s: rc=%i (%d / %d)", (char *) FPSTR(mqttConnFailed), MQTTclient.state(), mqttFailCount+1, maxRetries);
+        snprintf(logBuf, serialLoglength, "%s: rc=%i (%d / %d)", (char *) FPSTR(mqttConnFailed), MQTTclient.state(), i, mqttMaxRetriesPerInterval);
         loggerNl(logBuf, LOGLEVEL_ERROR);
-        mqttFailCount++;
-        delay(500);
     }
   }
   return false;
@@ -3217,9 +3225,9 @@ void sendWebsocketData(uint32_t client, uint8_t code) {
         object["rfidId"] = currentRfidTagId;
     } else if (code == 20) {
         object["pong"] = "pong";
-    } else if (code == 30){
+    } else if (code == 30) {
         object["refreshFileList"] = "ready";
-    }else if (code == 31){
+    } else if (code == 31) {
         object["indexingState"] = fileNameBuf;
     }
 
